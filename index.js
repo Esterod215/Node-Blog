@@ -107,6 +107,23 @@ server.get('/api/users/:id', (req, res) => {
       });
   });
 
+  server.get('/api/users/posts/:user_id',(req,res)=>{
+    const {user_id}=req.params
+    dbUsers
+    .getUserPosts(user_id)
+    .then(userPosts=>{
+        if(userPosts === 0){
+            res.status(404).json({message:'No posts from that user'});
+              return;
+        }
+        res.json(userPosts);
+    })
+    .catch(err=>{
+        res.status(500).json({message:err})
+        return
+    });
+  });
+
 
 
 
@@ -121,6 +138,92 @@ server.get('/api/posts',(req,res)=>{
     res.status(500).json({success:false, message:err})
 })
 });
+
+server.post('/api/posts',(req,res)=>{
+    const { text,user_id } = req.body;
+     if(!text || !user_id) {
+         res.status(400).json({message:"Please provide text and user_id for the post."})
+         return;
+     }
+     
+     dbPosts
+     .insert({
+         text,user_id
+     })
+     .then(response =>{
+         res.status(201).json(response)
+     }).catch(err=>{
+         res.status(400).json({message: err})
+         return;
+     });
+ });
+
+ server.get('/api/posts/:id', (req, res) => {
+    const { id } = req.params;
+    dbPosts
+      .getById(id)
+      .then(post => {
+        if (post.length === 0) {
+          res.status(404).json({success:false,message:'The post with the specified ID does not exist.'});
+          return;
+        }
+        res.json(post);
+      })
+      .catch(error => {
+        res.status(500).json({message:'The post information could not be retrieved.'});
+      });
+  });
+
+  server.delete('/api/posts/:id', (req, res) => {
+    const { id } = req.params;
+    dbPosts
+      .remove(id)
+      .then(response => {
+        if (response === 0) {
+          res.status(404).json({message:'The post with the specified ID does not exist.'});
+          return;
+        }
+        res.json({ success: true,message:`Post with id: ${id} removed from system` });
+      })
+      .catch(error => {
+        res.status(500).json({message:'The post could not be removed'});
+        return;
+      });
+  });
+
+  server.put('/api/posts/:id', (req, res) => {
+    const { id } = req.params;
+    const { text, user_id } = req.body;
+    if (!text || !user_id) {
+      res.status(400).json({message:'Must provide text and user_id'});
+      return;
+    }
+    dbPosts
+      .update(id, { text, user_id })
+      .then(response => {
+        if (response == 0) {
+            res.status(404).json({message:'The post with the specified ID does not exist.'});
+          return;
+        }
+        dbPosts
+          .findById(id)
+          .then(post => {
+            if (post.length === 0) {
+              res.status(404).json({message:'Post with that id not found'});
+              return;
+            }
+            res.json(post);
+          })
+          .catch(error => {
+            res.status(500).json({message:'Error looking up Post'});
+          });
+      })
+      .catch(error => {
+        res.status(500).json({message:error});
+        return;
+      });
+  });
+ 
 
 
 
